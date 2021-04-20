@@ -6,7 +6,7 @@ Max-k-sum-squared
 
 TODO:
     - Add more test functions.
-    - Do ew want to consider multiplicative noise?
+    - Do we want to consider multiplicative noise?
 
 '''
 import numpy as np

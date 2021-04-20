@@ -39,14 +39,6 @@ class ZORO(BaseOptimizer):
         self.step_size = params["step_size"]
         self.num_samples = params["num_samples"]
         self.prox = prox
-        
-        # Handle the (potential) proximal operator
-        def Prox(self,x):
-            if self.prox == None:
-                return x
-            else:
-                return self.prox(x)
-            
         # Define sampling matrix
         # TODO (?): add support for other types of random sampling directions
         Z = 2*(np.random.rand(self.num_samples,self.n) > 0.5) - 1
@@ -54,6 +46,15 @@ class ZORO(BaseOptimizer):
         cosamp_params = {"Z": Z, "delta": self.delta, "maxiterations": 10,
                          "tol": 0.5, "sparsity": self.sparsity} 
         self.cosamp_params = cosamp_params
+        
+    # Handle the (potential) proximal operator
+    def Prox(self,x):
+        if self.prox == None:
+            return x
+        else:
+            return self.prox.prox(x, self.step_size)
+            
+        
         
     def CosampGradEstimate(self):
     # Gradient estimation
@@ -89,7 +90,10 @@ class ZORO(BaseOptimizer):
         
         grad_est, f_est = self.CosampGradEstimate()
         self.fd = f_est
-        self.x += -self.step_size*grad_est
+        # Note that if no prox operator was specified then self.prox is the
+        # identity mapping.
+        self.x = self.Prox(self.x -self.step_size*grad_est)
+        
         
         if self.reachedFunctionBudget(self.function_budget, self.function_evals):
             # if budget is reached return parent
