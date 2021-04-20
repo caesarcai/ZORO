@@ -19,7 +19,7 @@ mpl.style.use('seaborn')
 
 # problem set up
 n = 2000
-s = 200
+s = int(0.1*n)
 noiseamp = 0.001 # noise amplitude
 obj_func = SparseQuadric(n, s, noiseamp)
 
@@ -28,7 +28,8 @@ x0    = np.random.randn(n)
 x0    = 100*x0/np.linalg.norm(x0)
 xx0   = copy.deepcopy(x0)
 
-sparsity = int(0.1*len(x0)) # This is a decent default, if no better estimate is known
+sparsity = s
+#sparsity = int(0.1*len(x0)) # This is a decent default, if no better estimate is known. 
 
 # Parameters for ZORO. Defaults are fine in most cases
 params = {"step_size":1.0, "delta": 0.0001, "max_cosamp_iter": 10, 
@@ -39,7 +40,7 @@ performance_log_ZORO = [[0, obj_func(x0)]]
 
 
 # initialize optimizer object
-opt  = ZORO(x0, obj_func, params, function_budget= int(1e5))
+opt  = ZORO(x0, obj_func, params, function_budget= int(1e6))
 
 # the actual optimization routine
 termination = False
