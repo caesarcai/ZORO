@@ -19,7 +19,6 @@ class ZORO(BaseOptimizer):
     ZORO for black box optimization. 
     TODO: 
          - Implement opportunistic sampling
-         - Implement regularizers
     '''
     
     def __init__(self, x0, f, params, function_budget=10000, prox=None,
@@ -41,7 +40,7 @@ class ZORO(BaseOptimizer):
         self.prox = prox
         # Define sampling matrix
         # TODO (?): add support for other types of random sampling directions
-        Z = 2*(np.random.rand(self.num_samples,self.n) > 0.5) - 1
+        Z = 2*(np.random.rand(self.num_samples, self.n) > 0.5) - 1
         
         cosamp_params = {"Z": Z, "delta": self.delta, "maxiterations": 10,
                          "tol": 0.5, "sparsity": self.sparsity} 
