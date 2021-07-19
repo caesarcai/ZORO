@@ -3,20 +3,20 @@
 """
 Created on Thu Apr 15 15:46:35 2021
 
-Code for ZORO, by Cai, McKenzie Yin and Zhang
+Code for ZORO, by Cai, McKenzie ,Yin, and Zhang
 
 """
 
 import numpy as np
+import numpy.linalg as la
 from base import BaseOptimizer
 from Cosamp import cosamp
 
 
 class ZORO(BaseOptimizer):
+    
     '''
     ZORO for black box optimization. 
-    TODO: 
-         - Implement opportunistic sampling
     '''
     
     def __init__(self, x0, f, params, function_budget=10000, prox=None,
@@ -101,5 +101,180 @@ class ZORO(BaseOptimizer):
                 return self.function_evals, self.x, 'T'
  
         self.t += 1
-
         return self.function_evals, False, False
+    
+    
+    
+class AdaZORO(BaseOptimizer):
+    
+    '''
+    ZORO with adaptive sampling for black box optimization. 
+    '''
+    
+    def __init__(self, x0, f, params, function_budget=10000, prox=None,
+                 function_target=None):
+        
+        super().__init__()
+        
+        self.function_evals = 0
+        self.function_budget = function_budget
+        self.function_target = function_target
+        self.f = f
+        self.x = x0
+        self.n = len(x0)
+        self.t = 0
+        self.delta = params["delta"]
+        self.sparsity = params["sparsity"]
+        self.step_size = params["step_size"]
+        #self.num_samples = params["num_samples"]
+        self.num_samples_constant = params["num_samples_constant"]
+        self.num_samples = np.ceil(self.num_samples_constant * self.sparsity * np.log(self.n/self.sparsity))
+        self.phi = params["phi"]
+        self.prox = prox
+        
+        # Define sampling matrix
+        # TODO (?): add support for other types of random sampling directions
+        Z = 2*(np.random.rand(self.num_samples, self.n) > 0.5) - 1
+
+        cosamp_params = {"Z": Z, "delta": self.delta, "maxiterations": 10,
+                         "tol": 0.5}
+        self.cosamp_params = cosamp_params
+
+    # Handle the (potential) proximal operator
+    def Prox(self, x):
+        if self.prox is None:
+            return x
+        else:
+            return self.prox.prox(x, self.step_size)
+       
+    def CosampGradEstimate(self):
+        '''
+        Gradient estimation sub-routine.
+        '''
+      
+        maxiterations = self.cosamp_params["maxiterations"]
+        Z = self.cosamp_params["Z"]
+        delta = self.cosamp_params["delta"]
+        sparsity = self.sparsity
+        tol = self.cosamp_params["tol"]
+        num_samples = np.ceil(self.num_samples_constant * sparsity * np.log(self.n/sparsity))
+        Z = Z[0:num_samples,:]
+        x = self.x
+        f = self.f
+        phi = self.phi
+        y = np.zeros(num_samples)
+        function_estimate = 0
+        function_evals = 0
+        
+        for i in range(num_samples):
+            y_temp = f(x + delta*np.transpose(Z[i,:]))
+            y_temp2 = f(x)
+            function_estimate += y_temp2
+            y[i] = (y_temp - y_temp2)/(np.sqrt(num_samples)*delta)
+            function_evals += 2
+        
+        Z = Z/np.sqrt(num_samples)
+        grad_estimate = cosamp(Z, y, sparsity, tol, maxiterations)
+        function_estimate = function_estimate/num_samples
+        
+        
+        if la.norm(Z @ grad_estimate - y)/la.norm(y) > phi:
+            return grad_estimate, function_estimate, False, function_evals
+        else:
+            return grad_estimate, function_estimate, True, function_evals        
+    
+    
+    
+    def SparseLstSq(self, old_grad_est):
+        '''
+        Least square with fixed support
+        '''
+        
+        old_support = (old_grad_est != 0)
+        sparsity = np.count_nonzero(old_grad_est)  #self.sparsity
+        Z = self.cosamp_params["Z"]
+        delta = self.cosamp_params["delta"]
+        tol = self.cosamp_params["tol"]
+        num_samples = sparsity
+        Z = Z[0:num_samples,:]
+        x = self.x
+        f = self.f
+        phi = self.phi
+        y = np.zeros(num_samples)
+        function_estimate = 0
+        function_evals = 0
+        
+        for i in range(num_samples):
+            y_temp = f(x + delta*np.transpose(Z[i,:]))
+            y_temp2 = f(x)
+            function_estimate += y_temp2
+            y[i] = (y_temp - y_temp2)/(np.sqrt(num_samples)*delta)
+            function_evals += 2        
+        
+        Z = Z/np.sqrt(num_samples)
+        
+        grad_est_non_zeros,_ ,_ ,_ = la.lstsq(Z[:,old_support], y, rcond=None)
+        function_estimate = function_estimate/num_samples
+        
+        if la.norm(Z[:,old_support] @ grad_est_non_zeros - y)/la.norm(y) > phi:
+            return grad_est_non_zeros, function_estimate, False, function_evals
+        else:
+            grad_est[old_support] = grad_est_non_zeros
+            return grad_est, function_estimate, True, function_evals
+
+
+
+    def getMoreZ(self):
+        '''
+        Get more rows in Z matrix
+        '''
+        Z = self.cosamp_params["Z"]
+        sparsity = self.sparsity
+        num_samples = np.ceil(self.num_samples_constant * sparsity * np.log(self.n/sparsity))
+        
+        more_rows = num_samples - np.size(Z, 0)
+        if more_rows > 0:
+            Z_new = 2*(np.random.rand(more_rows, self.n) > 0.5) - 1
+            self.cosamp_params["Z"] = np.concatenate((Z, Z_new), axis=0)
+            
+
+
+    def step(self):
+        '''
+        Take step of optimizer
+        '''
+        good_est = False
+        if (self.t > 0):
+            grad_est, f_est, good_est, function_evals = self.SparseLstSq(self.grad_est)
+        if good_est == True:
+            self.function_evals += function_evals 
+            self.grad_est = grad_est
+            self.fd = f_est
+            self.x = self.Prox(self.x - self.step_size * grad_est)
+        else:
+            grad_est, f_est, good_est, function_evals = self.CosampGradEstimate()
+            while good_est == False:
+                if np.ceil(self.num_samples_constant * self.sparsity * np.log(self.n/self.sparsity)) <= self.n:
+                    self.sparsity += 1
+                    self.getMoreZ()                    
+                    grad_est, f_est, good_est, function_evals = self.CosampGradEstimate()
+                else:
+                    grad_est, f_est, good_est, function_evals = self.SparseLstSq(np.ones(self.n))
+                    good_est = True
+            self.function_evals += function_evals 
+            self.grad_est = grad_est
+            self.fd = f_est
+            self.x = self.Prox(self.x - self.step_size * grad_est)
+
+        if self.reachedFunctionBudget(self.function_budget, self.function_evals):
+            # if budget is reached return current iterate
+            return self.function_evals, self.x, 'B'
+
+        if self.function_target is not None:
+            if self.reachedFunctionTarget(self.function_target, f_est):
+                # if function target is reached terminate
+                return self.function_evals, self.x, 'T'
+            
+        self.t += 1
+        return self.function_evals, False, False 
+    
