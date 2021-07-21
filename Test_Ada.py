@@ -39,13 +39,14 @@ init_sparsity = 2   # initial sparisty guess for adaptive sampling, i.e. AdaZORO
 # Parameters for ZORO. Defaults are fine in most cases
 params = {"step_size":1.0, "delta": 0.0001, "max_cosamp_iter": 10, 
           "cosamp_tol": 0.1,"sparsity": init_sparsity,
-          "num_samples_constant": 2, "phi":0.4}
+          "num_samples_constant": 1, "phi_cosamp": 0.3,"phi_lstsq": 0.1, 
+          "compessible_constant": 1.1}
 
 performance_log_ZORO = [[0, obj_func(x0)]]
 
 
 # initialize optimizer object
-opt  = AdaZORO(x0, obj_func, params, function_budget= int(1e6))
+opt  = AdaZORO(x0, obj_func, params, function_budget= int(2e5))
 
 # the actual optimization routine
 termination = False

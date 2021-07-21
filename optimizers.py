@@ -73,10 +73,12 @@ class ZORO(BaseOptimizer):
             function_estimate += y_temp2
             y[i] = (y_temp - y_temp2)/(np.sqrt(num_samples)*delta)
             self.function_evals += 2
+            
+        function_estimate = function_estimate/num_samples
         
         Z = Z/np.sqrt(num_samples)
         grad_estimate = cosamp(Z, y, sparsity, tol, maxiterations)
-        function_estimate = function_estimate/num_samples
+        
     
         return grad_estimate, function_estimate
 
@@ -130,8 +132,11 @@ class AdaZORO(BaseOptimizer):
         #self.num_samples = params["num_samples"]
         self.num_samples_constant = params["num_samples_constant"]
         self.num_samples = self.update_num_samples()
-        self.phi = params["phi"]
+        self.phi_cosamp = params["phi_cosamp"]
+        self.phi_lstsq = params["phi_lstsq"]
+        self.compessible_constant = params["compessible_constant"]
         self.prox = prox
+        self.compessible = True
         
         # Define sampling matrix
         # TODO (?): add support for other types of random sampling directions
@@ -167,11 +172,13 @@ class AdaZORO(BaseOptimizer):
         Z = Z[0:self.num_samples,:]
         x = self.x
         f = self.f
-        phi = self.phi
+        phi = self.phi_cosamp
         y = np.zeros(self.num_samples)
         function_estimate = 0
         function_evals = 0
         
+        # We could reuse the queries from letsq/cosamp in the same iteration
+        # but we didn't do it for simplify the implementation
         for i in range(self.num_samples):
             y_temp = f(x + delta*np.transpose(Z[i,:]))
             y_temp2 = f(x)
@@ -179,10 +186,13 @@ class AdaZORO(BaseOptimizer):
             y[i] = (y_temp - y_temp2)/(np.sqrt(self.num_samples)*delta)
             function_evals += 2
         
-        Z = Z/np.sqrt(self.num_samples)
-        grad_estimate = cosamp(Z, y, sparsity, tol, maxiterations)
         function_estimate = function_estimate/self.num_samples
         
+        Z = Z/np.sqrt(self.num_samples)
+        grad_estimate = cosamp(Z, y, sparsity, tol, maxiterations)
+        
+        
+        # print('cosamp error',la.norm(Z @ grad_estimate - y)/la.norm(y)  )  ################
         if la.norm(Z @ grad_estimate - y)/la.norm(y) > phi:
             return grad_estimate, function_estimate, False, function_evals
         else:
@@ -190,45 +200,71 @@ class AdaZORO(BaseOptimizer):
     
     
     
-    def SparseLstSq(self, old_grad_est):
+    def SparseLstSq(self, old_grad_est, compessible):
         '''
         Least square with fixed support
         '''
         
-        old_support = (old_grad_est != 0)
-        sparsity =  self.sparsity # np.count_nonzero(old_grad_est)  #self.sparsity
+        Z = self.cosamp_params["Z"]
         delta = self.cosamp_params["delta"]
-        num_samples = 2*sparsity
-        Z_temp = self.cosamp_params["Z"]
-        Z = np.zeros((num_samples,self.n))
-        Z[:,old_support] = Z_temp[0:num_samples,old_support]
+        
+        if compessible == True:
+            sparsity =  self.sparsity
+            num_samples = sparsity
+            old_support = (old_grad_est != 0)
+            Z_restricted = np.zeros((num_samples,self.n))
+            Z_restricted[:,old_support] = Z[0:num_samples,old_support]
+        else:
+            sparsity =  np.count_nonzero(old_grad_est)
+            num_samples = int(self.compessible_constant * sparsity)
+            
         #Z = self.cosamp_params["Z"]
-        #Z = Z[0:num_samples,:]
+        Z = Z[0:num_samples,:]
         x = self.x
         f = self.f
-        phi = self.phi
+        phi = self.phi_lstsq
         y = np.zeros(num_samples)
+        y_restricted = np.zeros(num_samples)
         function_estimate = 0
         function_evals = 0
         
-        for i in range(num_samples):
-            y_temp = f(x + delta*np.transpose(Z[i,:]))
-            y_temp2 = f(x)
-            function_estimate += y_temp2
-            y[i] = (y_temp - y_temp2)/(np.sqrt(num_samples)*delta)
-            function_evals += 2        
-        
-        Z = Z/np.sqrt(num_samples)
-        
-        grad_est_non_zeros,_ ,_ ,_ = la.lstsq(Z[:,old_support], y, rcond=None)
-        function_estimate = function_estimate/num_samples
-        
-        if la.norm(Z[:,old_support] @ grad_est_non_zeros - y)/la.norm(y) > phi:
-            return grad_est_non_zeros, function_estimate, False, function_evals
+        if compessible == True:
+            for i in range(num_samples):
+                y_temp = f(x + delta*np.transpose(Z[i,:]))
+                y_temp_restricted = f(x + delta*np.transpose(Z_restricted[i,:]))
+                y_mid = f(x)
+                function_estimate += y_mid
+                y[i] = (y_temp - y_mid)/(np.sqrt(num_samples)*delta)
+                y_restricted[i] = (y_temp_restricted - y_mid)/(np.sqrt(num_samples)*delta)
+                function_evals += 3        
+                    
+            function_estimate = function_estimate/num_samples
+            
+            Z = Z/np.sqrt(num_samples)
+            grad_est_non_zeros,_ ,_ ,_ = la.lstsq(Z[:,old_support], y_restricted, rcond=None)
+            
+            # print('least sq error',la.norm(Z[:,old_support] @ grad_est_non_zeros - y)/la.norm(y) )  ################
+            
+            if la.norm(Z[:,old_support] @ grad_est_non_zeros - y)/la.norm(y) > phi:
+                return grad_est_non_zeros, function_estimate, False, function_evals
+            else:
+                grad_est = np.zeros(self.n)
+                grad_est[old_support] = grad_est_non_zeros
+                return grad_est, function_estimate, True, function_evals
         else:
-            grad_est = np.zeros(self.n)
-            grad_est[old_support] = grad_est_non_zeros
-            return grad_est, function_estimate, False, function_evals
+            for i in range(num_samples):
+                y_temp = f(x + delta*np.transpose(Z[i,:]))
+                y_mid = f(x)
+                function_estimate += y_mid
+                y[i] = (y_temp - y_mid)/(np.sqrt(num_samples)*delta)
+                function_evals += 2        
+                    
+            function_estimate = function_estimate/num_samples
+            
+            Z = Z/np.sqrt(num_samples)
+            grad_est,_ ,_ ,_ = la.lstsq(Z, y, rcond=None)
+                      
+            return grad_est, function_estimate, True, function_evals
 
 
 
@@ -254,7 +290,7 @@ class AdaZORO(BaseOptimizer):
         print('Current Sparsity: ', self.sparsity)
         good_est = False
         if (self.t > 0):
-            grad_est, f_est, good_est, function_evals = self.SparseLstSq(self.grad_est)
+            grad_est, f_est, good_est, function_evals = self.SparseLstSq(self.grad_est, self.compessible)
         if good_est == True:
             self.function_evals += function_evals 
             self.grad_est = grad_est
@@ -263,13 +299,13 @@ class AdaZORO(BaseOptimizer):
         else:
             grad_est, f_est, good_est, function_evals = self.CosampGradEstimate()
             while good_est == False:
-                if self.num_samples <= self.num_samples_constant * self.n:
+                if self.num_samples <= int(self.compessible_constant * self.n):
                     self.sparsity += 1
                     self.getMoreZ()                    
                     grad_est, f_est, good_est, function_evals = self.CosampGradEstimate()
                 else:
-                    grad_est, f_est, good_est, function_evals = self.SparseLstSq(np.ones(self.n))
-                    good_est = True
+                    self.compessible = False
+                    grad_est, f_est, good_est, function_evals = self.SparseLstSq(np.ones(self.n), self.compessible)
             self.function_evals += function_evals 
             self.grad_est = grad_est
             self.fd = f_est
