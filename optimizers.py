@@ -105,6 +105,7 @@ class ZORO(BaseOptimizer):
     
     
     
+    
 class AdaZORO(BaseOptimizer):
     
     '''
@@ -128,7 +129,7 @@ class AdaZORO(BaseOptimizer):
         self.step_size = params["step_size"]
         #self.num_samples = params["num_samples"]
         self.num_samples_constant = params["num_samples_constant"]
-        self.num_samples = np.ceil(self.num_samples_constant * self.sparsity * np.log(self.n/self.sparsity))
+        self.num_samples = self.update_num_samples()
         self.phi = params["phi"]
         self.prox = prox
         
@@ -146,37 +147,41 @@ class AdaZORO(BaseOptimizer):
             return x
         else:
             return self.prox.prox(x, self.step_size)
+        
+    def update_num_samples(self):
+        num_samples = int(np.ceil(self.num_samples_constant * self.sparsity * np.log(self.n)))
+        return num_samples
        
+        
     def CosampGradEstimate(self):
         '''
         Gradient estimation sub-routine.
         '''
-      
+        
         maxiterations = self.cosamp_params["maxiterations"]
-        Z = self.cosamp_params["Z"]
-        delta = self.cosamp_params["delta"]
+        self.num_samples = self.update_num_samples()
         sparsity = self.sparsity
+        delta = self.cosamp_params["delta"]
         tol = self.cosamp_params["tol"]
-        num_samples = np.ceil(self.num_samples_constant * sparsity * np.log(self.n/sparsity))
-        Z = Z[0:num_samples,:]
+        Z = self.cosamp_params["Z"]
+        Z = Z[0:self.num_samples,:]
         x = self.x
         f = self.f
         phi = self.phi
-        y = np.zeros(num_samples)
+        y = np.zeros(self.num_samples)
         function_estimate = 0
         function_evals = 0
         
-        for i in range(num_samples):
+        for i in range(self.num_samples):
             y_temp = f(x + delta*np.transpose(Z[i,:]))
             y_temp2 = f(x)
             function_estimate += y_temp2
-            y[i] = (y_temp - y_temp2)/(np.sqrt(num_samples)*delta)
+            y[i] = (y_temp - y_temp2)/(np.sqrt(self.num_samples)*delta)
             function_evals += 2
         
-        Z = Z/np.sqrt(num_samples)
+        Z = Z/np.sqrt(self.num_samples)
         grad_estimate = cosamp(Z, y, sparsity, tol, maxiterations)
-        function_estimate = function_estimate/num_samples
-        
+        function_estimate = function_estimate/self.num_samples
         
         if la.norm(Z @ grad_estimate - y)/la.norm(y) > phi:
             return grad_estimate, function_estimate, False, function_evals
@@ -191,12 +196,14 @@ class AdaZORO(BaseOptimizer):
         '''
         
         old_support = (old_grad_est != 0)
-        sparsity = np.count_nonzero(old_grad_est)  #self.sparsity
-        Z = self.cosamp_params["Z"]
+        sparsity =  self.sparsity # np.count_nonzero(old_grad_est)  #self.sparsity
         delta = self.cosamp_params["delta"]
-        tol = self.cosamp_params["tol"]
-        num_samples = sparsity
-        Z = Z[0:num_samples,:]
+        num_samples = 2*sparsity
+        Z_temp = self.cosamp_params["Z"]
+        Z = np.zeros((num_samples,self.n))
+        Z[:,old_support] = Z_temp[0:num_samples,old_support]
+        #Z = self.cosamp_params["Z"]
+        #Z = Z[0:num_samples,:]
         x = self.x
         f = self.f
         phi = self.phi
@@ -219,8 +226,9 @@ class AdaZORO(BaseOptimizer):
         if la.norm(Z[:,old_support] @ grad_est_non_zeros - y)/la.norm(y) > phi:
             return grad_est_non_zeros, function_estimate, False, function_evals
         else:
+            grad_est = np.zeros(self.n)
             grad_est[old_support] = grad_est_non_zeros
-            return grad_est, function_estimate, True, function_evals
+            return grad_est, function_estimate, False, function_evals
 
 
 
@@ -229,10 +237,9 @@ class AdaZORO(BaseOptimizer):
         Get more rows in Z matrix
         '''
         Z = self.cosamp_params["Z"]
-        sparsity = self.sparsity
-        num_samples = np.ceil(self.num_samples_constant * sparsity * np.log(self.n/sparsity))
+        self.num_samples = self.update_num_samples()
         
-        more_rows = num_samples - np.size(Z, 0)
+        more_rows = self.num_samples - np.size(Z, 0)
         if more_rows > 0:
             Z_new = 2*(np.random.rand(more_rows, self.n) > 0.5) - 1
             self.cosamp_params["Z"] = np.concatenate((Z, Z_new), axis=0)
@@ -243,6 +250,8 @@ class AdaZORO(BaseOptimizer):
         '''
         Take step of optimizer
         '''
+        
+        print('Current Sparsity: ', self.sparsity)
         good_est = False
         if (self.t > 0):
             grad_est, f_est, good_est, function_evals = self.SparseLstSq(self.grad_est)
@@ -254,7 +263,7 @@ class AdaZORO(BaseOptimizer):
         else:
             grad_est, f_est, good_est, function_evals = self.CosampGradEstimate()
             while good_est == False:
-                if np.ceil(self.num_samples_constant * self.sparsity * np.log(self.n/self.sparsity)) <= self.n:
+                if self.num_samples <= self.num_samples_constant * self.n:
                     self.sparsity += 1
                     self.getMoreZ()                    
                     grad_est, f_est, good_est, function_evals = self.CosampGradEstimate()

@@ -10,7 +10,8 @@ TODO:
 
 '''
 import numpy as np
-import sys
+#import sys
+import math
 
 class SparseQuadric(object):
     '''An implementation of the sparse quadric function.'''
@@ -40,3 +41,25 @@ class MaxK(object):
         return f_no_noise + self.noiseamp*self.rng.randn()
  
 
+
+class CompressibleQuadric(object):
+    '''An implementation of the sparse quadric function.'''
+    def __init__(self, n, decay_factor, noiseamp):
+        self.noiseamp = noiseamp/np.sqrt(n)
+        self.decay_factor = decay_factor
+        self.dim = n
+        self.rng = np.random.RandomState()
+        self.diag = np.zeros(n)
+        for i in range(0,n):
+            self.diag[i] = math.exp(-self.decay_factor*i)
+        
+    def __call__(self,x):
+        #f_no_noise = 0
+        #for i in range(0,self.dim):
+            #f_no_noise += math.exp(-self.decay_factor*i)*x[i]**2
+        f_no_noise = np.dot(self.diag * x, x)
+        return f_no_noise + self.noiseamp*self.rng.randn()
+        #f_no_noise = np.dot(x[0:self.s],x[0:self.s])
+        #f_no_noise += 1e-4*np.dot(x[self.s:self.dim],x[self.s:self.dim])
+        #return f_no_noise + self.noiseamp*self.rng.randn()
+    
