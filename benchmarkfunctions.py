@@ -24,6 +24,7 @@ class SparseQuadric(object):
     def __call__(self,x):
         f_no_noise = np.dot(x[0:self.s],x[0:self.s])
         return f_no_noise + self.noiseamp*self.rng.randn()
+
     
 class MaxK(object):
     '''An implementation of the max-k-squared-sum function.'''
@@ -40,7 +41,6 @@ class MaxK(object):
         f_no_noise = np.dot(x[idx2], x[idx2])/2
         return f_no_noise + self.noiseamp*self.rng.randn()
  
-
 
 class CompressibleQuadric(object):
     '''An implementation of the sparse quadric function.'''

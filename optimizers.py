@@ -342,13 +342,13 @@ class AdaZORO(BaseOptimizer):
 
         if self.reachedFunctionBudget(self.function_budget, self.function_evals):
             # if budget is reached return current iterate
-            return self.function_evals, self.x, 'B'
+            return self.function_evals, self.sparsity, self.x, 'B'
 
         if self.function_target is not None:
             if self.reachedFunctionTarget(self.function_target, f_est):
                 # if function target is reached terminate
-                return self.function_evals, self.x, 'T'
+                return self.function_evals, self.sparsity, self.x, 'T'
             
         self.t += 1
-        return self.function_evals, False, False 
+        return self.function_evals, self.sparsity, False, False 
     

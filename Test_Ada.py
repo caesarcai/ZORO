@@ -43,6 +43,7 @@ params = {"step_size":1.0, "delta": 0.0001, "max_cosamp_iter": 10,
           "compessible_constant": 1.1}
 
 performance_log_ZORO = [[0, obj_func(x0)]]
+sparsity_log_ZORO = [init_sparsity]
 
 
 # initialize optimizer object
@@ -60,10 +61,11 @@ while termination is False:
     # If ZORO terminated because the target accuracy is met,
     # termination= T.
     
-    evals_ZORO, solution_ZORO, termination = opt.step()
+    evals_ZORO, sparsity_ZORO, solution_ZORO, termination = opt.step()
 
     # save some useful values
     performance_log_ZORO.append( [evals_ZORO,np.mean(opt.fd)] )
+    sparsity_log_ZORO.append([sparsity_ZORO])
     # print some useful values
     opt.report( 'Estimated f(x_k): %f  function evals: %d\n' %
         (np.mean(opt.fd), evals_ZORO) )
@@ -71,7 +73,7 @@ while termination is False:
 fig, ax = plt.subplots()
 
 ax.plot(np.array(performance_log_ZORO)[:,0],
- np.log10(np.array(performance_log_ZORO)[:,1]), linewidth=1, label = "ZORO")
+ np.log10(np.array(performance_log_ZORO)[:,1]), linewidth=1, label = "AdaZORO")
 plt.xlabel('function evaluations')
 plt.ylabel('$log($f(x)$)$')
 leg = ax.legend()
