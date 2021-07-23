@@ -5,8 +5,7 @@ Created on Fri Apr 16 13:27:29 2021
 
 @author: danielmckenzie
 
-TODO:
-     - There is a slight mismatch between function value and number of queries 
+Simple example of using Adaptive ZORO (AdaZORO).
 """
 from optimizers import *
 from benchmarkfunctions import *

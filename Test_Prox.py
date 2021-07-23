@@ -5,10 +5,12 @@ Created on Mon Apr 19 18:51:47 2021
 
 @author: danielmckenzie
 
-Testing using proximal operators. We solve a regularized sparse proximal problem:
-    argmin x^tQX + ||x||_1
-    
+Simple example of using ZORO with a regularizer.
 
+This example uses the proximal operator associated to an ell_1 regularizer.
+
+For more options, see the pyproximal docs: https://pypi.org/project/pyproximal/
+    
 """
 
 from optimizers import *

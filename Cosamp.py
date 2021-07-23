@@ -25,7 +25,7 @@ Created on Tue Mar 23 13:29:52 2021
 % and corrected multiple times again and again.
 % To begin with, see: http://media.aau.dk/null_space_pursuits/2011/07/ ...
 % algorithm-power-hour-compressive-sampling-matching-pursuit-cosamp.html
-%
+% Modified slightly for speed by Daniel McKenzie and HanQin Cai in 2020-2021
 % This script/program is released under the Commons Creative Licence
 % with Attribution Non-commercial Share Alike (by-nc-sa)
 % http://creativecommons.org/licenses/by-nc-sa/3.0/

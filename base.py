@@ -5,9 +5,10 @@
 BaseOptimizer
   A class containing useful methods that are inherited by any optimizer.
   Generally it is an attempt, to make the code more readable.
-  
-Todo:
-    * Add automatic verbose report.'''
+
+Original version available at https://github.com/NiMlr/High-Dim-ES-RL  
+'''
+
 import sys
 
 

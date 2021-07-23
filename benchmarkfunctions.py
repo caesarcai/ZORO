@@ -1,12 +1,6 @@
-'''This module contains the following:
-
-Sparse Quadric
-
-Max-k-sum-squared
-
-TODO:
-    - Add more test functions.
-    - Do we want to consider multiplicative noise?
+'''
+This module contains various test functions for the ZORO algorithm. 
+All of them exhibit gradient sparsity or compressibility.
 
 '''
 import numpy as np
