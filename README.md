@@ -16,7 +16,7 @@ Feel free to contact us at mckenzie@math.ucla.edu or hqcai@math.ucla.edu.
 ## Recommended citation
 If you find this code useful please cite the following work:
 
-H.Q. Cai, D. Mckenzie, W. Yin, and Z. Zhang. Zeroth-Order Regularized Optimization (ZORO): Approximately Sparse Gradients and Adaptive Sampling. arXiv preprint arXiv: 2003.13001.
+HanQin Cai, Daniel Mckenzie, Wotao Yin, and Zhenliang Zhang. Zeroth-Order Regularized Optimization (ZORO): Approximately Sparse Gradients and Adaptive Sampling. arXiv preprint arXiv: 2003.13001.
 
 Bibtex:  
 @article{cai2020zeroth,  
