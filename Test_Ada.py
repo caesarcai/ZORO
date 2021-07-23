@@ -34,7 +34,7 @@ xx0   = copy.deepcopy(x0)
 #sparsity = s
 #sparsity = int(0.1*len(x0)) # This is a decent default, if no better estimate is known. 
 
-init_sparsity = 2   # initial sparisty guess for adaptive sampling, i.e. AdaZORO
+init_sparsity = 2   # initial sparsity guess for adaptive sampling, i.e. AdaZORO
 
 # Parameters for ZORO. Defaults are fine in most cases
 params = {"step_size":1.0, "delta": 0.0001, "max_cosamp_iter": 10, 
@@ -65,16 +65,21 @@ while termination is False:
 
     # save some useful values
     performance_log_ZORO.append( [evals_ZORO,np.mean(opt.fd)] )
-    sparsity_log_ZORO.append([sparsity_ZORO])
+    sparsity_log_ZORO.append(sparsity_ZORO)
     # print some useful values
     opt.report( 'Estimated f(x_k): %f  function evals: %d\n' %
         (np.mean(opt.fd), evals_ZORO) )
    
-fig, ax = plt.subplots()
+fig, (ax1, ax2) = plt.subplots(1,2)
 
-ax.plot(np.array(performance_log_ZORO)[:,0],
+ax1.plot(np.array(performance_log_ZORO)[:,0],
  np.log10(np.array(performance_log_ZORO)[:,1]), linewidth=1, label = "AdaZORO")
-plt.xlabel('function evaluations')
-plt.ylabel('$log($f(x)$)$')
-leg = ax.legend()
+ax1.set_xlabel('function evaluations')
+ax1.set_ylabel('$log($f(x)$)$')
+ax1.legend()
+
+ax2.plot(np.array(sparsity_log_ZORO), linewidth=1, label = "AdaZORO")
+ax2.set_xlabel('number of iterations')
+ax2.set_ylabel('estimated sparsity')
+ax2.legend()
 plt.show()
