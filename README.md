@@ -18,16 +18,10 @@ If you find this code useful please cite the following work:
 
 H.Q. Cai, D. Mckenzie, W. Yin, and Z. Zhang. Zeroth-Order Regularized Optimization (ZORO): Approximately Sparse Gradients and Adaptive Sampling. arXiv preprint arXiv: 2003.13001.
 
-Bibtex:
-
-@article{cai2020zeroth,
-
-title={Zeroth-order regularized optimization (zoro): Approximately sparse gradients and adaptive sampling},
-
-author={Cai, HanQin and Mckenzie, Daniel and Yin, Wotao and Zhang, Zhenliang},
-
-journal={arXiv preprint arXiv:2003.13001},
-
-year={2020}
-
+Bibtex:  
+@article{cai2020zeroth,  
+title={Zeroth-order regularized optimization (zoro): Approximately sparse gradients and adaptive sampling},  
+author={Cai, HanQin and Mckenzie, Daniel and Yin, Wotao and Zhang, Zhenliang},  
+journal={arXiv preprint arXiv:2003.13001},  
+year={2020}  
 }
