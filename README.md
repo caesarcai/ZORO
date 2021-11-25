@@ -1,6 +1,6 @@
 # ZORO
 
-A Python implementation of the ZORO algorithm, as introduced in *Zeroth-order regularized optimization (ZORO): Approximately sparse gradients and adaptive sampling* by Cai, McKenzie, Yin and Zhang. Preprint available <a href=https://arxiv.org/abs/2003.13001> here </a>.
+A Python implementation of the ZORO algorithm, as introduced in *Zeroth-order regularized optimization (ZORO): Approximately sparse gradients and adaptive sampling* by Cai, McKenzie, Yin and Zhang. This paper is accepted to SIAM Journal on Optimization (SIOPT). Preprint available <a href=https://arxiv.org/abs/2003.13001> here </a>.
 
 ZORO, and its adaptive variant AdaZORO, are implemented as classes in `optimizers.py`. We use the `BaseOptimizer` class as in [this](https://github.com/NiMlr/High-Dim-ES-RL) Repo.
 
