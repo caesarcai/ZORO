@@ -11,7 +11,7 @@ Python 3.5+. For proximal operators the `pyproximal` package is required.
 See `Test.py`, `Test_Prox.py` and `Test_Ada.py` for examples of using ZORO.
 
 ## Questions?
-Feel free to contact us at mckenzie@math.ucla.edu or hqcai@math.ucla.edu.
+Feel free to contact us at mckenzie@math.ucla.edu or hqcai@ucf.edu.
 
 ## Recommended citation
 If you find this code useful please cite the following work:
